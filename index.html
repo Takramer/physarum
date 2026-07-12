@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHYSARUM — a living interface</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦠</text></svg>">
+<style>
+  :root {
+    --ink: #d8efe2;
+    --dim: #5d8272;
+    --glow: #7dffc4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #040806; }
+  body { font-family: "SF Mono", ui-monospace, Menlo, monospace; color: var(--ink); }
+  canvas#gpu { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+  .food {
+    position: fixed; z-index: 3; cursor: pointer; user-select: none;
+    color: var(--dim); letter-spacing: 0.35em; font-size: 13px;
+    padding: 14px; transition: color .4s, text-shadow .4s;
+    text-shadow: 0 0 10px rgba(4,8,6,.95), 0 0 22px rgba(4,8,6,.9);
+    background: none; border: none; font-family: inherit;
+  }
+  .food:hover, .food.open { color: var(--glow); text-shadow: 0 0 18px rgba(125,255,196,.65); }
+  #title {
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: clamp(28px, 5vw, 64px); letter-spacing: 0.5em; cursor: default;
+    color: var(--ink); text-indent: 0.5em;
+  }
+  #sub {
+    position: fixed; z-index: 3; top: calc(50% + clamp(30px, 4.5vw, 58px)); left: 50%;
+    transform: translateX(-50%); color: var(--dim); font-size: 11px; letter-spacing: .3em;
+    user-select: none; text-indent: .3em;
+  }
+  #nav-organism { top: 6%; left: 6%; }
+  #nav-behavior { top: 6%; right: 6%; }
+  #nav-sound    { bottom: 7%; left: 6%; }
+  #nav-source   { bottom: 7%; right: 6%; }
+
+  .panel {
+    position: fixed; z-index: 5; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: min(520px, 88vw); background: rgba(4, 12, 9, 0.88);
+    border: 1px solid rgba(125,255,196,.22); padding: 34px 36px;
+    display: none; backdrop-filter: blur(6px); line-height: 1.75; font-size: 13.5px;
+  }
+  .panel.open { display: block; }
+  .panel h2 { font-size: 13px; letter-spacing: .4em; color: var(--glow); margin-bottom: 18px; font-weight: 400; }
+  .panel p + p { margin-top: 12px; }
+  .panel .x { position: absolute; top: 10px; right: 14px; color: var(--dim); cursor: pointer; background: none; border: none; font-family: inherit; font-size: 14px; }
+  .panel .x:hover { color: var(--glow); }
+  .panel a { color: var(--glow); }
+  .panel em { color: var(--glow); font-style: normal; }
+
+  #splash {
+    position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: #040806; cursor: pointer; transition: opacity 1.2s;
+  }
+  #splash.gone { opacity: 0; pointer-events: none; }
+  #splash .big { letter-spacing: .55em; font-size: 15px; text-indent: .55em; color: var(--ink); }
+  #splash .small { letter-spacing: .3em; font-size: 11px; color: var(--dim); text-indent: .3em; }
+  #splash .pulse { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  #mute { position: fixed; z-index: 6; bottom: 7%; left: 50%; transform: translateX(-50%);
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-family: inherit; font-size: 11px; letter-spacing: .3em; }
+  #mute:hover { color: var(--glow); }
+
+  #nogpu { display: none; position: fixed; inset: 0; z-index: 20; background: #040806;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    text-align: center; padding: 24px; }
+  #nogpu .big { letter-spacing: .4em; }
+  #nogpu .small { color: var(--dim); font-size: 12px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<canvas id="gpu"></canvas>
+
+<div id="title" class="food" data-label="PHYSARUM">PHYSARUM</div>
+<div id="sub">A LIVING INTERFACE</div>
+
+<button class="food nav" id="nav-organism" data-panel="p-organism">ORGANISM</button>
+<button class="food nav" id="nav-behavior" data-panel="p-behavior">BEHAVIOR</button>
+<button class="food nav" id="nav-sound"    data-panel="p-sound">SOUND</button>
+<button class="food nav" id="nav-source"   data-panel="p-source">SOURCE</button>
+
+<section class="panel" id="p-organism">
+  <button class="x">✕</button>
+  <h2>ORGANISM</h2>
+  <p><em>Physarum polycephalum</em> is a single-celled slime mold with no brain and no nervous system, yet it solves mazes, approximates shortest-path networks, and once redesigned the Tokyo rail map more efficiently than its engineers.</p>
+  <p>What you are watching is 150,000 autonomous agents living in a GPU compute shader. Each one follows three rules: sense, turn, deposit. Everything else (the veins, the pulsing, the hunger) emerges.</p>
+</section>
+
+<section class="panel" id="p-behavior">
+  <button class="x">✕</button>
+  <h2>BEHAVIOR</h2>
+  <p>The words on this page are <em>food</em>. Agents smell them from across the screen and grow transport veins toward them. Hover any label and the colony reroutes to feed on it.</p>
+  <p>Your cursor is also food. Hold still and it will find you.</p>
+</section>
+
+<section class="panel" id="p-sound">
+  <button class="x">✕</button>
+  <h2>SOUND</h2>
+  <p>The audio is not a recording. A generative Web Audio patch — detuned drones, a slow breathing filter, sparse pentatonic plucks through a feedback delay — plays forever without repeating.</p>
+  <p>The colony's mood leaks into it: moving your cursor opens the filter, and feeding the organism strikes new tones.</p>
+</section>
+
+<section class="panel" id="p-source">
+  <button class="x">✕</button>
+  <h2>SOURCE</h2>
+  <p>Zero frameworks. Zero dependencies. One WebGPU compute pipeline (agents → diffuse → render), one 2D canvas rasterizing the DOM into a pheromone field, one Web Audio graph.</p>
+  <p>Built by Claude (Fable 5) with Thomas Kramer, 2026.</p>
+</section>
+
+<button id="mute" hidden>SOUND ON</button>
+
+<div id="splash">
+  <div class="big">PHYSARUM</div>
+  <div class="small">A LIVING INTERFACE · SOUND ON</div>
+  <div class="small pulse">CLICK TO WAKE IT</div>
+</div>
+
+<div id="nogpu">
+  <div class="big">STILL DORMANT</div>
+  <div class="small">This organism needs WebGPU.<br>Open it in Chrome, Edge, or Safari 26+ on desktop.</div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
