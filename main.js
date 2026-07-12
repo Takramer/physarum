@@ -15,7 +15,7 @@ struct P {
   mouse: vec2f, dt: f32, time: f32,
   mouseStr: f32, agentN: f32, sensAng: f32, sensDist: f32,
   turnSpd: f32, speed: f32, attractW: f32, decay: f32,
-  depositAmt: f32, pad0: f32, pad1: f32, pad2: f32,
+  depositAmt: f32, hue: f32, pad1: f32, pad2: f32,
 };
 `;
 
@@ -112,6 +112,12 @@ fn vs(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
   return vec4f(p[vi], 0.0, 1.0);
 }
 
+// rotate color about the grey axis (Rodrigues): cheap full-spectrum hue shift
+fn hueRotate(c: vec3f, a: f32) -> vec3f {
+  let k = vec3f(0.57735026);
+  return c * cos(a) + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - cos(a));
+}
+
 fn at(x: i32, y: i32) -> f32 {
   let W = i32(u.size.x);
   let H = i32(u.size.y);
@@ -135,6 +141,7 @@ fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   col = mix(col, vec3f(0.04, 0.28, 0.21), smoothstep(0.0, 0.7, t));
   col = mix(col, vec3f(0.22, 0.82, 0.52), smoothstep(0.55, 1.9, t));
   col = mix(col, vec3f(0.88, 1.0, 0.86), smoothstep(1.7, 4.2, t));
+  col = clamp(hueRotate(col, u.hue), vec3f(0.0), vec3f(1.0));
 
   let v = fc.xy / u.canvas - 0.5;
   col *= 1.0 - dot(v, v) * 0.6;
@@ -150,6 +157,12 @@ let paramsBuf, sim = null; // sim: size-dependent resources
 let hovered = null;
 const mouse = { x: -9999, y: -9999, speed: 0, lastX: 0, lastY: 0, lastT: 0 };
 let startTime = performance.now();
+
+// interaction state: dropped food, photophobia, color
+const food = []; // {x, y, s} in CSS px, s = strength 0..1
+let lightOn = false;
+let hueScroll = 0; // user scroll offset, radians
+let huePulse = 0;  // decaying action pulse: warm on feed, cold on light
 
 const params = new Float32Array(20);
 
@@ -290,18 +303,32 @@ function drawAttractants() {
     ctx.fillText(el.dataset.label || el.textContent.trim(), cx, cy);
     ctx.filter = 'none';
   }
+
+  // dropped food: bright blobs that fade as the colony consumes them
+  for (const f of food) {
+    const fx = f.x * sx, fy = f.y * sy;
+    const R = 130 * sx * (0.5 + f.s * 0.5);
+    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, R);
+    g.addColorStop(0, `rgba(255,255,255,${0.75 * f.s})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(fx - R, fy - R, R * 2, R * 2);
+  }
+
   device.queue.copyExternalImageToTexture({ source: attractCanvas }, { texture: attractTex }, [W, H]);
 }
 
 function writeParams(time) {
   const { W, H } = sim;
   const sx = W / innerWidth, sy = H / innerHeight;
+  // hue: slow autonomous drift + gentle breathing + user scroll + action pulses
+  const hue = time * 0.03 + Math.sin(time * 0.1) * 0.15 + hueScroll + huePulse;
   params.set([
     W, H, canvas.width, canvas.height,
     mouse.x * sx, mouse.y * sy, 1.0, time,
-    1.2, AGENTS, 0.45, 12.0,
+    lightOn ? -7.0 : 1.2, AGENTS, 0.45, 12.0,
     0.5, 1.7, 2.2, 0.91,
-    0.35, 0, 0, 0,
+    0.35, hue, 0, 0,
   ]);
   device.queue.writeBuffer(paramsBuf, 0, params);
 }
@@ -335,6 +362,7 @@ function frame(now) {
   // decay mouse speed and feed it to the audio filter
   mouse.speed *= 0.92;
   audio.setActivity(Math.min(1, mouse.speed / 40));
+  huePulse *= 0.97;
 
   requestAnimationFrame(frame);
 }
@@ -348,6 +376,44 @@ addEventListener('pointermove', e => {
   mouse.x = e.clientX; mouse.y = e.clientY;
 });
 addEventListener('pointerleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+// press-and-release on empty canvas = drop food; press-and-hold = shine light
+let holdTimer = null;
+addEventListener('pointerdown', e => {
+  if (e.target !== canvas) return;
+  holdTimer = setTimeout(() => {
+    holdTimer = null;
+    lightOn = true;
+    huePulse -= 0.7; // cold flash
+    audio.light(true);
+  }, 250);
+});
+addEventListener('pointerup', e => {
+  if (lightOn) {
+    lightOn = false;
+    audio.light(false);
+    return;
+  }
+  if (!holdTimer) return;
+  clearTimeout(holdTimer);
+  holdTimer = null;
+  food.push({ x: e.clientX, y: e.clientY, s: 1 });
+  if (food.length > 12) food.shift();
+  huePulse += 0.7; // warm flash
+  audio.feed();
+  drawAttractants();
+});
+
+// dropped food fades as the colony consumes it
+setInterval(() => {
+  if (!food.length || !sim) return;
+  for (const f of food) f.s *= 0.96;
+  for (let i = food.length - 1; i >= 0; i--) if (food[i].s < 0.08) food.splice(i, 1);
+  drawAttractants();
+}, 400);
+
+// scroll shifts the colony's color
+addEventListener('wheel', e => { hueScroll += e.deltaY * 0.0015; });
 
 for (const el of document.querySelectorAll('.food')) {
   el.addEventListener('pointerenter', () => { hovered = el; drawAttractants(); audio.hover(); });

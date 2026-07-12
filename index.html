@@ -69,6 +69,10 @@
     font-family: inherit; font-size: 11px; letter-spacing: .3em; }
   #mute:hover { color: var(--glow); }
 
+  #hints { position: fixed; z-index: 6; bottom: calc(7% + 34px); left: 50%; transform: translateX(-50%);
+    color: var(--dim); font-size: 10px; letter-spacing: .3em; pointer-events: none; white-space: nowrap;
+    text-shadow: 0 0 10px rgba(4,8,6,.95), 0 0 22px rgba(4,8,6,.9); }
+
   #nogpu { display: none; position: fixed; inset: 0; z-index: 20; background: #040806;
     flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     text-align: center; padding: 24px; }
@@ -98,14 +102,14 @@
   <button class="x">✕</button>
   <h2>BEHAVIOR</h2>
   <p>The words on this page are <em>food</em>. Agents smell them from across the screen and grow transport veins toward them. Hover any label and the colony reroutes to feed on it.</p>
-  <p>Your cursor is also food. Hold still and it will find you.</p>
+  <p>Click empty space to <em>drop food</em>; the colony swarms the spot. Hold the pointer down to <em>shine light</em> and it scatters (physarum is photophobic). Scroll to <em>shift its color</em>. Your cursor is food too: hold still and it will find you.</p>
 </section>
 
 <section class="panel" id="p-sound">
   <button class="x">✕</button>
   <h2>SOUND</h2>
   <p>The audio is not a recording. A generative Web Audio patch — detuned drones, a slow breathing filter, sparse pentatonic plucks through a feedback delay — plays forever without repeating.</p>
-  <p>The colony's mood leaks into it: moving your cursor opens the filter, and feeding the organism strikes new tones.</p>
+  <p>The colony's mood leaks into it: moving your cursor opens the filter, feeding the organism strikes new tones, and shining light ducks the drone low until you let go.</p>
 </section>
 
 <section class="panel" id="p-source">
@@ -114,6 +118,8 @@
   <p>Zero frameworks. Zero dependencies. One WebGPU compute pipeline (agents → diffuse → render), one 2D canvas rasterizing the DOM into a pheromone field, one Web Audio graph.</p>
   <p>Built by Claude (Fable 5) with Thomas Kramer, 2026.</p>
 </section>
+
+<div id="hints">FEED · CLICK&nbsp;&nbsp;&nbsp;LIGHT · HOLD&nbsp;&nbsp;&nbsp;COLOR · SCROLL</div>
 
 <button id="mute" hidden>SOUND ON</button>
 

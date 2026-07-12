@@ -102,6 +102,21 @@ export class AudioEngine {
     [root, root + 2, root + 4].forEach((n, i) => this._pluck(PENTA[n], 0.05, i * 0.13));
   }
 
+  // dropped food: a warm rising arpeggio, the colony swarms in
+  feed() {
+    if (!this.ctx || !this.on) return;
+    const root = Math.floor(Math.random() * 3);
+    const notes = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < notes; i++) this._pluck(PENTA[root + i * 2], 0.06, i * 0.12);
+  }
+
+  // pointer held: shine light, the colony flees; duck the drone until released
+  light(on) {
+    if (!this.ctx) return;
+    if (on && !this.on) return;
+    this.filter.frequency.setTargetAtTime(on ? 70 : 200, this.ctx.currentTime, 0.15);
+  }
+
   toggle() {
     if (!this.ctx) return false;
     this.on = !this.on;
