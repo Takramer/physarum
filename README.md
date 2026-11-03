@@ -1,5 +1,7 @@
 # PHYSARUM — a living interface
 
+Live: https://physarum-theta.vercel.app
+
 The interface is an organism. 150,000 slime-mold agents live in a WebGPU compute
 shader; the page's nav labels are rasterized into a pheromone field the agents
 can smell, so the colony grows transport veins toward the words on screen.
@@ -28,3 +30,7 @@ Requires WebGPU (Chrome/Edge desktop, Safari 26+).
 All behavior constants live in `writeParams()` in `main.js`:
 sensor angle/distance, turn speed, agent speed, attractant weight, decay.
 Agent count and sim resolution are at the top of the file.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
