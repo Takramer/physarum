@@ -28,3 +28,7 @@ Requires WebGPU (Chrome/Edge desktop, Safari 26+).
 All behavior constants live in `writeParams()` in `main.js`:
 sensor angle/distance, turn speed, agent speed, attractant weight, decay.
 Agent count and sim resolution are at the top of the file.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
